@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+import time
 
 lc = "https://leetcode.com/"
 
@@ -8,6 +9,12 @@ def mostRecentSubmission(username):
     url = lc + username
 
     res = requests.get(url)
+
+    while res.status_code == 429:
+        print("Rate limited! Waiting 5 seconds")
+        time.sleep(5)
+
+        res = requests.get(url)
     
     soup = BeautifulSoup(res.text, "html.parser")
 

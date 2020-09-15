@@ -3,10 +3,9 @@ from discord.ext import commands, tasks
 import Leetcode as lc
 
 TOKEN = open('TOKEN.txt', 'r').readline()
-
 bot = commands.Bot(command_prefix='!')
 
-leetcodeIDList = {'quangvn2508':0, 'nnv': 0}
+leetcodeIDList = {'quangvn2508': 0, 'nnv': 0}
 
 @bot.event
 async def on_ready():
@@ -29,7 +28,7 @@ async def add(ctx, username):
 
 @tasks.loop(seconds=10)
 async def stalk():
-    channel = bot.get_channel(754253458630246493)
+    channel = bot.get_channel(755492106965090407)
     for lcid, lcc in leetcodeIDList.items():
         p, c = lc.mostRecentSubmission(lcid)
         if p == None:
@@ -37,7 +36,5 @@ async def stalk():
         if c > lcc:
             await channel.send(f'**{lcid}** just solved question **{p}**')
             leetcodeIDList[lcid] = c
-
-
 
 bot.run(TOKEN)
