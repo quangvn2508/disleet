@@ -28,7 +28,7 @@ async def add(ctx, username):
 
 @tasks.loop(seconds=10)
 async def stalk():
-    channel = bot.get_channel(755492106965090407)
+    channel = bot.get_channel(754253458630246493)
     for lcid, lcc in leetcodeIDList.items():
         p, c = lc.mostRecentSubmission(lcid)
         if p == None:
