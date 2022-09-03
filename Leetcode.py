@@ -1,57 +1,61 @@
 import requests
-from bs4 import BeautifulSoup
-import time
+from utils import log
 
-lc = "https://leetcode.com/"
+LEETCODE_GRAPHQL = "https://leetcode.com/graphql"
 
-def mostRecentSubmission(username):
-    # GET URL
-    url = lc + username
+QUESTION_COUNT_QUERY = """
+query getTotalQuestionSolved($username: String!){
+    matchedUser(username: $username) {
+        submitStatsGlobal {
+            acSubmissionNum {
+                count
+            }
+        }
+    }
+}
+"""
 
-    res = requests.get(url)
+RECENT_SOLVED_QUESTION = """
+query recentAcSubmissions($username: String!, $limit: Int!) {
+    recentAcSubmissionList(username: $username, limit: $limit) {
+        title
+        titleSlug
+        timestamp
+    }
+}
+"""
 
-    while res.status_code == 429:
-        print("Rate limited! Waiting 5 seconds")
-        time.sleep(5)
+def post_query(query, vars):
+    request = requests.post(LEETCODE_GRAPHQL, json={'query': query, 'variables': vars})
+    if request.status_code == 200:
+        return request.json(), 200
+    else:
+        return None, request.status_code
 
-        res = requests.get(url)
-    
-    soup = BeautifulSoup(res.text, "html.parser")
+def get_total_question_solved(username: str):
+    json, status_code = post_query(QUESTION_COUNT_QUERY, { "username": username })
+    if json == None:
+        log(f"Question count query fail with status code {status_code}, variables(username={username})")
+        return None, "Unable to fetch data"
 
-    tags = soup.find_all("div", {"class": "panel panel-default"})
+    try:
+        if "errors" in json:
+            return None, json["errors"][0]["message"]
+        return json["data"]["matchedUser"]["submitStatsGlobal"]["acSubmissionNum"][0]["count"], None
+    except Exception as e:
+        log(f"Fail to parse json {str(e)} when query for total question solved, variables(username={username})")
+        return None, "Exception occurred"
 
-    problem_list = None
-    progress_list = None
+def get_recent_AC_submission(username: str):
+    json, status_code = post_query(RECENT_SOLVED_QUESTION, { "username": username, "limit": 1 })
+    if json == None:
+        log(f"Recent AC query fail with status code {status_code}, variables(username={username})")
+        return None, "Unable to fetch data"
 
-    for t in tags:
-        try:
-            zzrot = t.find("h3", {"class": "panel-title"})
-            if zzrot.text == "Most recent submissions":
-                problem_list = t.find("ul", {"class": "list-group"})
-            if zzrot.text == "Progress":
-                progress_list = t.find("ul", {"class": "list-group"})
-        except: pass
-    
-    if problem_list == None or progress_list == None:
-        return None, -1
-
-    problem = None
-    count = 0
-
-    # Recent problem name
-    for li in problem_list:
-        try:
-            b = li.find("b")
-            problem = b.text
-            break
-        except: pass
-
-    # Problem count
-    for li in progress_list:
-        try:
-            span = li.find("span")
-            count = int(span.text.split()[0])
-            break
-        except: pass
-
-    return problem, count
+    try:
+        if "errors" in json:
+            return None, json["errors"][0]["message"]
+        return json["data"]["recentAcSubmissionList"][0], None
+    except Exception as e:
+        log(f"Fail to parse json {str(e)} when query for recent AC, variables(username={username})")
+        return None, "Exception occurred"

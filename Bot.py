@@ -1,40 +1,56 @@
 import discord
-from discord.ext import commands, tasks
-import Leetcode as lc
+from discord.ext import tasks
+from Leetcode import get_total_question_solved, get_recent_AC_submission
+from utils import log, timestampToString
 
-TOKEN = open('TOKEN.txt', 'r').readline()
-bot = commands.Bot(command_prefix='!')
+TOKEN = "MTAxNDYwMjczMTE1MzAwMjUxNg.G6sZV5.907Wwr1FU3nFpVgaOjc79GdwgmY4nKMvigDJ8Q"
+bot = discord.Bot()
 
-leetcodeIDList = {'quangvn2508': 0, 'nnv': 0}
+leetcodeUsersList = {}
 
 @bot.event
 async def on_ready():
     stalk.start()
-    print('Bot is ready')
+    print(f"{bot.user} is ready and online!")
 
-@bot.command()
+@bot.slash_command(name = "ping", description = "Get user's latency to bot server")
 async def ping(ctx):
-    await ctx.send(f'{ctx.author}\'s ping is {round(bot.latency * 1000)}ms')
+    await ctx.respond(f'{ctx.author}\'s ping is {round(bot.latency * 1000)}ms')
 
-@bot.command()
+@bot.slash_command(name = "add_leetcode", description = "Add a leetcode profile to be tracked")
 async def add(ctx, username):
-    p, c = lc.mostRecentSubmission(str(username))
-    print(username, p, c)
-    if p == None:
-        await ctx.send(f'Bot could not find leedcode with id **{username}**')
-    else:
-        leetcodeIDList[username] = c
-        await ctx.send(f'leedcode ID **{username}** is added')
+    if username in leetcodeUsersList:
+        await ctx.respond(f"User **{username}** already been tracked")
+        return
 
-@tasks.loop(seconds=10)
+    count, error = get_total_question_solved(username)
+    if error != None:
+        await ctx.respond(f"Unable to get status for **{username}** with error [{error}]")
+    else:
+        leetcodeUsersList[username] = count
+        await ctx.respond(f'User\'s added, **{username}** solved {count} questions')
+
+@tasks.loop(seconds=5)
 async def stalk():
     channel = bot.get_channel(754253458630246493)
-    for lcid, lcc in leetcodeIDList.items():
-        p, c = lc.mostRecentSubmission(lcid)
-        if p == None:
+    for username, question_count in leetcodeUsersList.items():
+        count, error = get_total_question_solved(username)
+        count+=1
+        print(count)
+        if error != None:
+            log(f"error [{error}] when stalking user {username}")
             continue
-        if c > lcc:
-            await channel.send(f'**{lcid}** just solved question **{p}**')
-            leetcodeIDList[lcid] = c
+        if count < question_count:
+            log(f"something wrong, current solved questions ({count}) smaller than server recorded ({question_count}) for user {username}")
+            continue
+        if count == question_count:
+            continue
+        leetcodeUsersList[username] = count-1
+
+        new_quesiton, error =  get_recent_AC_submission(username)
+        if error != None:
+            log(f"error [{error}] when get recent AC for user {username}")
+            continue
+        await channel.send(f"**{username}** just solved **{new_quesiton['title']}** (https://leetcode.com/problems/{new_quesiton['titleSlug']}/) at {timestampToString(new_quesiton['timestamp'])}")
 
 bot.run(TOKEN)
