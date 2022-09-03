@@ -39,7 +39,6 @@ async def stalk():
     channel = bot.get_channel(NOTIFICATION_CHANNEL)
     for username, question_count in leetcodeUsersList.items():
         count, error = get_total_question_solved(username)
-        print(count)
         if error != None:
             log(f"error [{error}] when stalking user {username}")
             continue
