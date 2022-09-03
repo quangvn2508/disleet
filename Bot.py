@@ -2,8 +2,12 @@ import discord
 from discord.ext import tasks
 from Leetcode import get_total_question_solved, get_recent_AC_submission
 from utils import log, timestampToString
+from dotenv import load_dotenv
+import os
 
-TOKEN = "MTAxNDYwMjczMTE1MzAwMjUxNg.G6sZV5.907Wwr1FU3nFpVgaOjc79GdwgmY4nKMvigDJ8Q"
+load_dotenv()
+TOKEN = os.getenv('TOKEN')
+NOTIFICATION_CHANNEL = int(os.getenv('NOTIFICATION_CHANNEL'))
 bot = discord.Bot()
 
 leetcodeUsersList = {}
@@ -32,10 +36,9 @@ async def add(ctx, username):
 
 @tasks.loop(seconds=5)
 async def stalk():
-    channel = bot.get_channel(754253458630246493)
+    channel = bot.get_channel(NOTIFICATION_CHANNEL)
     for username, question_count in leetcodeUsersList.items():
         count, error = get_total_question_solved(username)
-        count+=1
         print(count)
         if error != None:
             log(f"error [{error}] when stalking user {username}")
@@ -45,7 +48,7 @@ async def stalk():
             continue
         if count == question_count:
             continue
-        leetcodeUsersList[username] = count-1
+        leetcodeUsersList[username] = count
 
         new_quesiton, error =  get_recent_AC_submission(username)
         if error != None:
