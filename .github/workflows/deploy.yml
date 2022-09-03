@@ -1,0 +1,33 @@
+name: Deployment
+
+on:
+  push:
+    branches:
+      - "master"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: executing remote ssh commands using ssh key
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: ${{ secrets.PORT }}
+        script: |
+          cd ${{ secrets.PWD }}
+          git pull origin master
+          source env/bin/activate
+          pip install -r requirements.txt
+          ${{ secrets.DEPLOY_SCRIPT }}
