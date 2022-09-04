@@ -10,8 +10,8 @@ TOKEN = os.getenv('TOKEN')
 NOTIFICATION_CHANNEL = int(os.getenv('NOTIFICATION_CHANNEL'))
 bot = discord.Bot()
 
-leetcodeUsersList = {}
-userList = []
+usernameAndQuestionCount = {}
+usernameList = []
 nextUser = 0
 userCount = 0
 
@@ -26,7 +26,7 @@ async def ping(ctx):
 
 @bot.slash_command(name = "add_leetcode", description = "Add a leetcode profile to be tracked")
 async def add(ctx, username):
-    if username in leetcodeUsersList:
+    if username in usernameAndQuestionCount:
         await ctx.respond(f"User **{username}** already been tracked")
         return
 
@@ -35,9 +35,9 @@ async def add(ctx, username):
     if error != None:
         await ctx.respond(f"Unable to get status for **{username}** with error [{error}]")
     else:
-        leetcodeUsersList[username] = count
-        userList.append(username)
-        userCount = len(userList)
+        usernameAndQuestionCount[username] = count
+        usernameList.append(username)
+        userCount = len(usernameList)
         saveUser(username)
         await ctx.respond(f'User\'s added, **{username}** solved {count} questions')
 
@@ -47,9 +47,9 @@ async def stalk():
     if userCount == 0:
         return
     global nextUser
-    username = userList[nextUser]
+    username = usernameList[nextUser]
     nextUser = (nextUser + 1) % userCount
-    question_count = leetcodeUsersList[username]
+    question_count = usernameAndQuestionCount[username]
 
     count, error = get_total_question_solved(username)
     if error != None:
@@ -58,7 +58,7 @@ async def stalk():
     if count == question_count:
         return
 
-    leetcodeUsersList[username] = count
+    usernameAndQuestionCount[username] = count
     if count < question_count:
         log(f"something wrong, current solved questions ({count}) smaller than server recorded ({question_count}) for user {username}")
         return
@@ -69,12 +69,12 @@ async def stalk():
     await channel.send(f"**{username}** just solved **{new_quesiton['title']}** (https://leetcode.com/problems/{new_quesiton['titleSlug']}/) at {timestampToString(new_quesiton['timestamp'])}")
 
 if __name__ == "__main__":
-    userList = loadUsers()
-    for username in userList:
+    usernameList = loadUsers()
+    for username in usernameList:
         count, error = get_total_question_solved(username)
         if error != None:
             log(f"error [{error}] when get recent AC for user {username}")
             continue
-        leetcodeUsersList[username] = count
-    userCount = len(userList)
+        usernameAndQuestionCount[username] = count
+    userCount = len(usernameList)
     bot.run(TOKEN)
