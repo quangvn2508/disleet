@@ -35,11 +35,11 @@ async def add(ctx, username):
     if error != None:
         await ctx.respond(f"Unable to get status for **{username}** with error [{error}]")
     else:
+        await ctx.respond(f'User\'s added, **{username}** solved {count} questions')
         usernameAndQuestionCount[username] = count
         usernameList.append(username)
         userCount = len(usernameList)
         saveUser(username)
-        await ctx.respond(f'User\'s added, **{username}** solved {count} questions')
 
 @tasks.loop(seconds=1)
 async def stalk():
