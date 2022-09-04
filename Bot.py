@@ -1,7 +1,7 @@
 import discord
 from discord.ext import tasks
 from Leetcode import get_total_question_solved, get_recent_AC_submission
-from utils import log, timestampToString
+from utils import log, timestampToString, loadUsers, saveUser
 from dotenv import load_dotenv
 import os
 
@@ -32,6 +32,7 @@ async def add(ctx, username):
         await ctx.respond(f"Unable to get status for **{username}** with error [{error}]")
     else:
         leetcodeUsersList[username] = count
+        saveUser(username)
         await ctx.respond(f'User\'s added, **{username}** solved {count} questions')
 
 @tasks.loop(seconds=5)
@@ -42,17 +43,25 @@ async def stalk():
         if error != None:
             log(f"error [{error}] when stalking user {username}")
             continue
+        if count == question_count:
+            continue
+
+        leetcodeUsersList[username] = count
         if count < question_count:
             log(f"something wrong, current solved questions ({count}) smaller than server recorded ({question_count}) for user {username}")
             continue
-        if count == question_count:
-            continue
-        leetcodeUsersList[username] = count
-
         new_quesiton, error =  get_recent_AC_submission(username)
         if error != None:
             log(f"error [{error}] when get recent AC for user {username}")
             continue
         await channel.send(f"**{username}** just solved **{new_quesiton['title']}** (https://leetcode.com/problems/{new_quesiton['titleSlug']}/) at {timestampToString(new_quesiton['timestamp'])}")
 
-bot.run(TOKEN)
+if __name__ == "__main__":
+    userList = loadUsers()
+    for username in userList:
+        count, error = get_total_question_solved(username)
+        if error != None:
+            log(f"error [{error}] when get recent AC for user {username}")
+            continue
+        leetcodeUsersList[username] = count
+    bot.run(TOKEN)
